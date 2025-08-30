@@ -1,0 +1,3 @@
+
+> @hey/api@0.0.0 dev /app/apps/api
+> tsx watch src/index.ts

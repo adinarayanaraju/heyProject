@@ -3,36 +3,24 @@ import "dotenv/config";
 import { Status } from "@hey/data/enums";
 import logger from "@hey/helpers/logger";
 import { Hono } from "hono";
-import authContext from "./context/authContext";
 import cors from "./middlewares/cors";
 import infoLogger from "./middlewares/infoLogger";
-import appRouter from "./routes/app";
-import cronRouter from "./routes/cron";
-import lensRouter from "./routes/lens";
-import metadataRouter from "./routes/metadata";
-import oembedRouter from "./routes/oembed";
-import ogRouter from "./routes/og";
 import ping from "./routes/ping";
-import preferencesRouter from "./routes/preferences";
-import sitemapRouter from "./routes/sitemap";
+import postsRouter from "./routes/posts";
+import authRouter from "./routes/auth";
+import authMiddleware from "./middlewares/authMiddleware";
 
 const app = new Hono();
 
 // Context
 app.use(cors);
-app.use(authContext);
 app.use(infoLogger);
 
 // Routes
 app.get("/ping", ping);
-app.route("/app", appRouter);
-app.route("/lens", lensRouter);
-app.route("/cron", cronRouter);
-app.route("/metadata", metadataRouter);
-app.route("/oembed", oembedRouter);
-app.route("/preferences", preferencesRouter);
-app.route("/sitemap", sitemapRouter);
-app.route("/og", ogRouter);
+app.use("/posts/*", authMiddleware);
+app.route("/posts", postsRouter);
+app.route("/auth", authRouter);
 
 app.notFound((ctx) =>
   ctx.json({ error: "Not Found", status: Status.Error }, 404)
