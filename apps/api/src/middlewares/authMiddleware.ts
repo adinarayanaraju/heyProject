@@ -1,32 +1,26 @@
-import { LENS_API_URL } from "@hey/data/constants";
-import logger from "@hey/helpers/logger";
-import type { Context, Next } from "hono";
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import { MiddlewareHandler } from 'hono'
+import { verify } from 'hono/jwt'
 
-const jwksUri = `${LENS_API_URL.replace("/graphql", "")}/.well-known/jwks.json`;
-// Cache the JWKS for 12 hours
-const JWKS = createRemoteJWKSet(new URL(jwksUri), {
-  cacheMaxAge: 60 * 60 * 12
-});
+const authMiddleware: MiddlewareHandler = async (c, next) => {
+  const authHeader = c.req.header('Authorization')
+  if (!authHeader) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
 
-const unauthorized = (c: Context) => c.body("Unauthorized", 401);
-
-const authMiddleware = async (c: Context, next: Next) => {
-  const token = c.get("token");
-
+  const token = authHeader.split(' ')[1]
   if (!token) {
-    logger.warn("missing token");
-    return unauthorized(c);
+    return c.json({ error: 'Unauthorized' }, 401)
   }
 
   try {
-    await jwtVerify(token, JWKS);
-  } catch {
-    logger.warn("invalid token");
-    return unauthorized(c);
+    const secret = process.env.JWT_SECRET || 'your-secret-key'
+    const payload = await verify(token, secret) as { sub: string, role: string }
+    c.set('user', payload)
+  } catch (error) {
+    return c.json({ error: 'Unauthorized' }, 401)
   }
 
-  return next();
-};
+  await next()
+}
 
-export default authMiddleware;
+export default authMiddleware
